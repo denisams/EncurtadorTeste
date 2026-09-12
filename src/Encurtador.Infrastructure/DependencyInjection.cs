@@ -5,7 +5,7 @@ using Encurtador.Infrastructure.Caching;
 using Encurtador.Infrastructure.CodeGeneration;
 using Encurtador.Infrastructure.Persistence;
 using Hangfire;
-using Hangfire.PostgreSql;
+using Hangfire.MySql;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,18 +17,24 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        var postgresConnectionString = configuration.GetConnectionString("Postgres")
-            ?? throw new InvalidOperationException("Connection string 'Postgres' is not configured.");
+        var mySqlConnectionString = configuration.GetConnectionString("MySql")
+            ?? throw new InvalidOperationException("Connection string 'MySql' is not configured.");
         var redisConnectionString = configuration.GetConnectionString("Redis")
             ?? throw new InvalidOperationException("Connection string 'Redis' is not configured.");
 
-        services.AddDbContext<AppDbContext>(options => options.UseNpgsql(postgresConnectionString));
+        // A fixed ServerVersion (rather than ServerVersion.AutoDetect) avoids an extra
+        // round-trip to the database on every startup and lets migrations be generated
+        // at design time without a live database connection.
+        var mySqlServerVersion = new MySqlServerVersion(new Version(8, 4, 0));
+
+        services.AddDbContext<AppDbContext>(options =>
+            options.UseMySql(mySqlConnectionString, mySqlServerVersion));
 
         services.AddSingleton<IConnectionMultiplexer>(_ =>
             ConnectionMultiplexer.Connect(redisConnectionString));
 
         services.AddHangfire(config => config
-            .UsePostgreSqlStorage(options => options.UseNpgsqlConnection(postgresConnectionString)));
+            .UseStorage(new MySqlStorage(mySqlConnectionString, new MySqlStorageOptions { PrepareSchemaIfNecessary = true })));
         services.AddHangfireServer();
 
         services.AddScoped<IUrlRepository, UrlRepository>();

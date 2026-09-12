@@ -1,20 +1,20 @@
 # EncurtadorTeste
 
-Encurtador de URLs em .NET 10 (Minimal API) desenhado para suportar **alto volume de redirecionamentos**, que é o padrão de tráfego típico desse tipo de serviço (leituras/redirects >> escritas).
+Encurtador de URLs em .NET 9 (Minimal API) desenhado para suportar **alto volume de redirecionamentos**, que é o padrão de tráfego típico desse tipo de serviço (leituras/redirects >> escritas).
 
 ## Decisões de arquitetura para alto volume
 
 | Problema | Decisão | Por quê |
 |---|---|---|
-| Gerar códigos únicos sem gargalo no banco | Contador atômico no Redis (`INCR`) + codificação Base62 | Redis processa comandos em uma única thread, então `INCR` é atômico sem lock e sustenta uma taxa de escrita muito maior do que um `IDENTITY`/sequence do Postgres sob concorrência alta. Não depende de round-trip ao banco para saber se o código já existe. |
-| Redirecionamento rápido sob carga | Cache-aside com Redis (TTL de 6h) na frente do Postgres | Redirects são a esmagadora maioria do tráfego; atender a maior parte deles direto do cache evita que o Postgres vire gargalo. |
+| Gerar códigos únicos sem gargalo no banco | Contador atômico no Redis (`INCR`) + codificação Base62 | Redis processa comandos em uma única thread, então `INCR` é atômico sem lock e sustenta uma taxa de escrita muito maior do que um `AUTO_INCREMENT` do MySQL sob concorrência alta. Não depende de round-trip ao banco para saber se o código já existe. |
+| Redirecionamento rápido sob carga | Cache-aside com Redis (TTL de 6h) na frente do MySQL | Redirects são a esmagadora maioria do tráfego; atender a maior parte deles direto do cache evita que o MySQL vire gargalo. |
 | Registrar cliques sem atrasar o redirect | Contagem de cliques processada de forma assíncrona via Hangfire (fire-and-forget) | O `UPDATE` de contador de cliques nunca fica no caminho crítico do redirect — se o banco estiver lento, o usuário ainda é redirecionado instantaneamente. |
-| Escalar horizontalmente | API stateless (sem sessão em memória); estado vive em Redis/Postgres | Permite subir N instâncias atrás de um load balancer sem coordenação. |
+| Escalar horizontalmente | API stateless (sem sessão em memória); estado vive em Redis/MySQL | Permite subir N instâncias atrás de um load balancer sem coordenação. |
 | Consultas de leitura eficientes | Índice único em `Code`, `AsNoTracking()`, `ExecuteUpdateAsync` para incremento atômico | Minimiza custo de I/O e overhead do EF Core no caminho quente. |
 
-### Caminho para escalar ainda mais além de uma única instância de Redis/Postgres
+### Caminho para escalar ainda mais além de uma única instância de Redis/MySQL
 - **Sharding do contador**: múltiplos contadores Redis (`url:code:counter:0..N`), um por partição/instância, evitando qualquer contenção mesmo com muitos nós de API.
-- **Réplicas de leitura do Postgres**: como o cache absorve a maior parte das leituras, as poucas que chegam ao banco (cache miss) podem ser direcionadas a réplicas.
+- **Réplicas de leitura do MySQL**: como o cache absorve a maior parte das leituras, as poucas que chegam ao banco (cache miss) podem ser direcionadas a réplicas.
 - **CDN / edge redirect**: para casos extremos, os redirects mais acessados podem ser cacheados na borda (CDN) usando os headers HTTP corretos.
 
 ## Estrutura do projeto
@@ -23,7 +23,7 @@ Encurtador de URLs em .NET 10 (Minimal API) desenhado para suportar **alto volum
 src/
   Encurtador.Domain          # Entidades e utilitários puros (ex.: Base62)
   Encurtador.Application     # Casos de uso, DTOs e abstrações (interfaces)
-  Encurtador.Infrastructure  # EF Core (Postgres), Redis, Hangfire
+  Encurtador.Infrastructure  # EF Core (MySQL), Redis, Hangfire
   Encurtador.Api             # Minimal API, endpoints, composição/DI
 tests/
   Encurtador.Tests           # Testes unitários (xUnit + Moq)
@@ -57,7 +57,7 @@ A API sobe em `http://localhost:8080`. As migrations do EF Core são aplicadas a
 
 ### Rodando sem Docker
 
-1. Suba Postgres e Redis (ex.: via `docker compose up postgres redis`).
+1. Suba MySQL e Redis (ex.: via `docker compose up mysql redis`).
 2. Ajuste `ConnectionStrings` em `src/Encurtador.Api/appsettings.Development.json` se necessário.
 3. `dotnet run --project src/Encurtador.Api`
 
