@@ -4,11 +4,23 @@ using Encurtador.Infrastructure.Persistence;
 using Hangfire;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddInfrastructure(builder.Configuration);
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "EncurtadorTeste API",
+        Version = "v1",
+        Description = "Encurtador de URLs preparado para alto volume de redirecionamentos.",
+    });
+});
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -42,6 +54,13 @@ app.MapHealthChecks("/health");
 
 if (app.Environment.IsDevelopment())
 {
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "EncurtadorTeste API v1");
+        options.RoutePrefix = "swagger";
+    });
+
     app.UseHangfireDashboard("/hangfire");
 
     using var scope = app.Services.CreateScope();

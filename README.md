@@ -43,7 +43,9 @@ tests/
 
 - `GET /hangfire` — dashboard do Hangfire (somente em ambiente de desenvolvimento).
 
-Ambos os endpoints têm *rate limiting* próprio (`/api/urls` mais restrito que o redirect, já que o redirect precisa suportar volume muito maior).
+- `GET /swagger` — Swagger UI para explorar e testar a API (somente em ambiente de desenvolvimento).
+
+Ambos os endpoints de negócio têm *rate limiting* próprio (`/api/urls` mais restrito que o redirect, já que o redirect precisa suportar volume muito maior).
 
 ## Rodando localmente
 

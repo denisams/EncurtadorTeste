@@ -22,6 +22,11 @@ public static class UrlEndpoints
             };
         })
         .WithName("ShortenUrl")
+        .WithSummary("Encurta uma URL")
+        .WithDescription("Gera um código curto para a URL informada. Aceita um alias customizado opcional e um tempo de expiração opcional.")
+        .Produces<ShortenUrlResponse>(StatusCodes.Status201Created)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status409Conflict)
         .RequireRateLimiting("shorten");
 
         app.MapGet("/{code}", async (string code, UrlShortenerService service, CancellationToken cancellationToken) =>
@@ -32,6 +37,10 @@ public static class UrlEndpoints
                 : Results.NotFound();
         })
         .WithName("ResolveUrl")
+        .WithSummary("Redireciona para a URL original")
+        .WithDescription("Resolve um código curto e redireciona (302) para a URL original. Retorna 404 se o código não existir ou tiver expirado.")
+        .Produces(StatusCodes.Status302Found)
+        .Produces(StatusCodes.Status404NotFound)
         .RequireRateLimiting("redirect");
 
         return app;
