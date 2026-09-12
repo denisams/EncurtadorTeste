@@ -80,3 +80,4 @@ dotnet ef migrations add NomeDaMigration --project src/Encurtador.Infrastructure
 - Não há autenticação/autorização nos endpoints de criação de link.
 - Alias customizado e código auto-gerado compartilham o mesmo espaço de nomes; em produção, vale prefixar ou validar para evitar colisão entre os dois.
 - Analytics de clique é apenas um contador; um sistema real de analytics em alto volume normalmente usaria um pipeline de eventos (ex.: fila + processamento em lote) em vez de um `UPDATE` por clique.
+- O contador de códigos no Redis tem persistência (AOF) para sobreviver a um restart do container, mas se o volume do Redis for perdido por completo enquanto o MySQL mantém os dados antigos, os próximos códigos gerados podem colidir com códigos já existentes (o `INSERT` falharia com violação de índice único). Um reconciliador que reinicializa o contador a partir do maior `Id` do banco resolveria isso, mas ficou fora do escopo aqui.

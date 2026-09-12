@@ -18,11 +18,18 @@ services:
 
   redis:
     image: redis:7-alpine
+    # AOF persistence so the short-code counter (and warm cache) survive a
+    # container restart. Without this, a Redis restart would reset the
+    # counter to zero while MySQL still has the old rows, and the next
+    # auto-generated codes would collide with existing ones.
+    command: redis-server --appendonly yes
     ports:
       # Host port 16379 (not the default 6379) to avoid clashing with any other
       # Redis already running on the host. The API container itself talks to
       # this service over the internal Docker network as "redis:6379".
       - "16379:6379"
+    volumes:
+      - redis-data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -47,3 +54,4 @@ services:
 
 volumes:
   mysql-data:
+  redis-data:
