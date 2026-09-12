@@ -55,11 +55,11 @@ docker compose up --build
 
 A API sobe em `http://localhost:8080`. As migrations do EF Core são aplicadas automaticamente ao iniciar em ambiente `Development`.
 
-### Rodando sem Docker
+### Rodando sem Docker (ex.: via F5 no Visual Studio)
 
-1. Suba MySQL e Redis (ex.: via `docker compose up mysql redis`).
-2. Ajuste `ConnectionStrings` em `src/Encurtador.Api/appsettings.Development.json` se necessário.
-3. `dotnet run --project src/Encurtador.Api`
+1. Suba só a infra: `docker compose up -d mysql redis`.
+   - O MySQL fica em `localhost:3306` e o Redis em `localhost:16379` (porta não-padrão só no mapeamento do host, para não colidir com outro Redis que já esteja rodando na máquina). Isso já está refletido em `appsettings.json`.
+2. Rode a API normalmente (`dotnet run --project src/Encurtador.Api` ou F5). As migrations do EF Core são aplicadas automaticamente ao iniciar em ambiente `Development`.
 
 ## Testes
 
