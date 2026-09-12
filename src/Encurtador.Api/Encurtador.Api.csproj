@@ -21,4 +21,15 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <!--
+    Rodar a API (F5 ou dotnet run) exige MySQL e Redis no ar, mas eles não sobem
+    sozinhos. Este target chama "docker compose up" antes do build, então F5 já
+    garante a infra disponível sem precisar lembrar de subir os containers à parte.
+    ContinueOnError evita quebrar o build caso o Docker Desktop não esteja rodando.
+  -->
+  <Target Name="StartLocalInfrastructure" BeforeTargets="Build" Condition="'$(Configuration)' == 'Debug'">
+    <Exec Command="docker compose -f &quot;$(MSBuildProjectDirectory)\..\..\docker-compose.yml&quot; up -d --wait mysql redis"
+          ContinueOnError="WarnAndContinue" />
+  </Target>
+
 </Project>
